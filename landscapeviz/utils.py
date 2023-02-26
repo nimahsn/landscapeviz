@@ -38,7 +38,9 @@ def get_vectors(model, seed=None, trajectory=None):
 
     else:
         cast = np.array([1]).T
-        for layer in weights:
+        for i, layer in enumerate(weights):
+            if layer.ndim < 1:
+                break
             # set standard normal parameters
             # filter-wise normalization
             k = len(layer.shape) - 1
@@ -68,7 +70,7 @@ def get_vectors(model, seed=None, trajectory=None):
                 ).reshape(d.shape)
             )
 
-        return weights, vector_x, vector_y
+        return i, weights, vector_x, vector_y
 
 
 def _obj_fn(model, data, solution):
@@ -95,11 +97,11 @@ def build_mesh(
     logging.basicConfig(level=logging.INFO)
 
     z_keys = model.metrics_names
-    z_keys[0] = model.loss
+    # z_keys[0] = model.loss
     Z = list()
 
     # get vectors and set spacing
-    origin, vector_x, vector_y = get_vectors(model, seed=seed, trajectory=trajectory)
+    size, origin, vector_x, vector_y = get_vectors(model, seed=seed, trajectory=trajectory)
     space = np.linspace(-extension, extension, grid_length)
 
     X, Y = np.meshgrid(space, space)
@@ -111,8 +113,10 @@ def build_mesh(
         for j in range(grid_length):
             solution = [
                 origin[x] + X[i][j] * vector_x[x] + Y[i][j] * vector_y[x]
-                for x in range(len(origin))
+                for x in range(size)
             ]
+            for i in range(size, len(origin)):
+                solution.append(origin[i])
 
             Z.append(_obj_fn(model, data, solution))
 
@@ -131,3 +135,4 @@ def build_mesh(
 
     del Z
     gc.collect()
+
