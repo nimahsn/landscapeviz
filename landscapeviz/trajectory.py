@@ -29,7 +29,6 @@ def weight_decoder(model):
         solution = np.append(solution, weights[i].flatten())
     return solution
 
-
 def weight_encoder(model, solution):
     start = 0
     weights = model.get_weights()

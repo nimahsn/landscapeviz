@@ -37,10 +37,12 @@ def get_vectors(model, seed=None, trajectory=None):
         return weights, vector_x, vector_y
 
     else:
+        skip_layers = []
         cast = np.array([1]).T
         for i, layer in enumerate(weights):
             if layer.ndim < 1:
-                break
+                skip_layers.append(i)
+                continue
             # set standard normal parameters
             # filter-wise normalization
             k = len(layer.shape) - 1
@@ -70,7 +72,7 @@ def get_vectors(model, seed=None, trajectory=None):
                 ).reshape(d.shape)
             )
 
-        return i, weights, vector_x, vector_y
+        return skip_layers, weights, vector_x, vector_y
 
 
 def _obj_fn(model, data, solution):
@@ -101,7 +103,7 @@ def build_mesh(
     Z = list()
 
     # get vectors and set spacing
-    size, origin, vector_x, vector_y = get_vectors(model, seed=seed, trajectory=trajectory)
+    skip_layers, origin, vector_x, vector_y = get_vectors(model, seed=seed, trajectory=trajectory)
     space = np.linspace(-extension, extension, grid_length)
 
     X, Y = np.meshgrid(space, space)
@@ -111,12 +113,18 @@ def build_mesh(
             logging.info("line {} out of {}".format(i, grid_length))
 
         for j in range(grid_length):
-            solution = [
-                origin[x] + X[i][j] * vector_x[x] + Y[i][j] * vector_y[x]
-                for x in range(size)
-            ]
-            for i in range(size, len(origin)):
-                solution.append(origin[i])
+            # solution = [
+            #     origin[x] + X[i][j] * vector_x[x] + Y[i][j] * vector_y[x]
+            #     for x in range(len(origin)) if x not in skip_layers
+            # ]
+            # for i in skip_layers:
+            #     solution.append(origin[i])
+            solution = []
+            for x in range(len(origin)):
+                if x in skip_layers:
+                    solution.append(origin[x])
+                else:
+                    solution.append(origin[x] + X[i][j] * vector_x[x] + Y[i][j] * vector_y[x])
 
             Z.append(_obj_fn(model, data, solution))
 
