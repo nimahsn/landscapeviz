@@ -22,14 +22,25 @@ def _fetch_data(key, filename):
 
 
 def plot_contour(
-    key, vmin=0.1, vmax=10, vlevel=0.5, trajectory=None, filename=FILENAME, save=False
+    key, filename, vmin=0.1, vmax=10, vlevel=0.5, log=False, margin=0, colorbar=True, colormap=plt.cm.coolwarm, dpi=100, trajectory=None, save=False
 ):
 
     X, Y, Z = _fetch_data(key, filename)
 
-    fig, ax = plt.subplots()
-    CS = ax.contour(X, Y, Z, cmap="summer", levels=np.arange(vmin, vmax, vlevel))
+    if margin > 0:
+        Z = Z[margin:-margin, margin:-margin]
+        X = X[margin:-margin, margin:-margin]
+        Y = Y[margin:-margin, margin:-margin]
+
+    if log:
+        Z = np.log10(Z + 0.1)
+
+
+    fig, ax = plt.subplots(dpi=dpi)
+    CS = ax.contour(X, Y, Z, cmap=colormap, levels=np.arange(vmin, vmax, vlevel))
     ax.clabel(CS, inline=1, fontsize=8)
+    if colorbar:
+        fig.colorbar(CS)
 
     if trajectory:
         with h5py.File(
@@ -58,21 +69,27 @@ def plot_grid(key, filename=FILENAME, save=False):
     plt.show()
 
 
-def plot_3d(key, filename=FILENAME, log=False, save=False):
+def plot_3d(key, filename, log=False, margin=0, colorbar=True, colormap=plt.cm.coolwarm, dpi=100, save=False):
 
     X, Y, Z = _fetch_data(key, filename)
+
+    if margin > 0:
+        Z = Z[margin:-margin, margin:-margin]
+        X = X[margin:-margin, margin:-margin]
+        Y = Y[margin:-margin, margin:-margin]
 
     if log:
         Z = np.log(Z + 0.1)
 
-    fig = plt.figure()
+    fig = plt.figure(dpi=dpi)
     ax = fig.add_subplot(111, projection="3d")
 
     # Plot the surface.
     surf = ax.plot_surface(
-        X, Y, Z, cmap=plt.cm.coolwarm, linewidth=0, antialiased=False
+        X, Y, Z, cmap=colormap, linewidth=0, antialiased=False
     )
-    fig.colorbar(surf, shrink=0.5, aspect=5)
+    if colorbar:
+        fig.colorbar(surf, shrink=0.5, aspect=5)
 
     if save:
         fig.savefig("./surface.svg")
